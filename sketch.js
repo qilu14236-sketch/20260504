@@ -14,12 +14,14 @@ function setup() {
   capture = createCapture(VIDEO);
   capture.hide(); 
   
-  // 載入 ml5 Facemesh 模型
-  facemesh = ml5.facemesh(capture, () => {
+  // 載入 ml5 Facemesh 模型 (對應 ml5.js v1 API)
+  facemesh = ml5.faceMesh({ maxFaces: 1 }, () => {
     console.log("Facemesh model ready!");
-  });
-  facemesh.on("predict", results => {
-    predictions = results;
+    
+    // 開始偵測臉部，並將結果即時存入 predictions
+    facemesh.detectStart(capture, results => {
+      predictions = results;
+    });
   });
 
   // 設定圖片的繪製模式為中心點
@@ -51,81 +53,35 @@ function draw() {
     strokeWeight(1);   // 粗細為1
     
     for (let i = 0; i < predictions.length; i++) {
-      let keypoints = predictions[i].scaledMesh;
+      let keypoints = predictions[i].keypoints;
       
-      // 利用 line 指令將指定的編號串接在一起
-      for (let j = 0; j < targetIndices.length - 1; j++) {
-        let p1 = keypoints[targetIndices[j]];
-        let p2 = keypoints[targetIndices[j + 1]];
+      // 定義一個輔助函式來處理串接與閉合，節省重複程式碼
+      let drawFeature = (indices) => {
+        for (let j = 0; j < indices.length - 1; j++) {
+          let p1 = keypoints[indices[j]];
+          let p2 = keypoints[indices[j + 1]];
+          
+          // ml5.js v1 版改用 .x 與 .y 來取得座標
+          let x1 = p1.x * scaleX - imgW / 2;
+          let y1 = p1.y * scaleY - imgH / 2;
+          let x2 = p2.x * scaleX - imgW / 2;
+          let y2 = p2.y * scaleY - imgH / 2;
+          
+          line(x1, y1, x2, y2);
+        }
         
-        let x1 = p1[0] * scaleX - imgW / 2;
-        let y1 = p1[1] * scaleY - imgH / 2;
-        let x2 = p2[0] * scaleX - imgW / 2;
-        let y2 = p2[1] * scaleY - imgH / 2;
-        
-        line(x1, y1, x2, y2);
-      }
-      
-      // 連接最後一點與第一點，將輪廓完美閉合 (這是嘴唇外框)
-      let pLast = keypoints[targetIndices[targetIndices.length - 1]];
-      let pFirst = keypoints[targetIndices[0]];
-      line(pLast[0] * scaleX - imgW / 2, pLast[1] * scaleY - imgH / 2, 
-           pFirst[0] * scaleX - imgW / 2, pFirst[1] * scaleY - imgH / 2);
+        // 閉合線條 (連接最後一點與第一點)
+        let pLast = keypoints[indices[indices.length - 1]];
+        let pFirst = keypoints[indices[0]];
+        line(pLast.x * scaleX - imgW / 2, pLast.y * scaleY - imgH / 2, 
+             pFirst.x * scaleX - imgW / 2, pFirst.y * scaleY - imgH / 2);
+      };
 
-      // 利用 line 指令將第二組指定的編號串接在一起 (內側嘴唇)
-      for (let j = 0; j < targetIndices2.length - 1; j++) {
-        let p1 = keypoints[targetIndices2[j]];
-        let p2 = keypoints[targetIndices2[j + 1]];
-        
-        let x1 = p1[0] * scaleX - imgW / 2;
-        let y1 = p1[1] * scaleY - imgH / 2;
-        let x2 = p2[0] * scaleX - imgW / 2;
-        let y2 = p2[1] * scaleY - imgH / 2;
-        
-        line(x1, y1, x2, y2);
-      }
-      
-      // 連接最後一點與第一點，將內側輪廓完美閉合
-      let pLast2 = keypoints[targetIndices2[targetIndices2.length - 1]];
-      let pFirst2 = keypoints[targetIndices2[0]];
-      line(pLast2[0] * scaleX - imgW / 2, pLast2[1] * scaleY - imgH / 2, 
-           pFirst2[0] * scaleX - imgW / 2, pFirst2[1] * scaleY - imgH / 2);
-
-      // 利用 line 指令將右眼外圈 (編號 247) 串接在一起
-      for (let j = 0; j < rightEyeOuter.length - 1; j++) {
-        let p1 = keypoints[rightEyeOuter[j]];
-        let p2 = keypoints[rightEyeOuter[j + 1]];
-        
-        let x1 = p1[0] * scaleX - imgW / 2;
-        let y1 = p1[1] * scaleY - imgH / 2;
-        let x2 = p2[0] * scaleX - imgW / 2;
-        let y2 = p2[1] * scaleY - imgH / 2;
-        
-        line(x1, y1, x2, y2);
-      }
-      // 右眼外圈閉合
-      let pLastRO = keypoints[rightEyeOuter[rightEyeOuter.length - 1]];
-      let pFirstRO = keypoints[rightEyeOuter[0]];
-      line(pLastRO[0] * scaleX - imgW / 2, pLastRO[1] * scaleY - imgH / 2, 
-           pFirstRO[0] * scaleX - imgW / 2, pFirstRO[1] * scaleY - imgH / 2);
-
-      // 利用 line 指令將右眼內圈 (編號 246) 串接在一起
-      for (let j = 0; j < rightEyeInner.length - 1; j++) {
-        let p1 = keypoints[rightEyeInner[j]];
-        let p2 = keypoints[rightEyeInner[j + 1]];
-        
-        let x1 = p1[0] * scaleX - imgW / 2;
-        let y1 = p1[1] * scaleY - imgH / 2;
-        let x2 = p2[0] * scaleX - imgW / 2;
-        let y2 = p2[1] * scaleY - imgH / 2;
-        
-        line(x1, y1, x2, y2);
-      }
-      // 右眼內圈閉合
-      let pLastRI = keypoints[rightEyeInner[rightEyeInner.length - 1]];
-      let pFirstRI = keypoints[rightEyeInner[0]];
-      line(pLastRI[0] * scaleX - imgW / 2, pLastRI[1] * scaleY - imgH / 2, 
-           pFirstRI[0] * scaleX - imgW / 2, pFirstRI[1] * scaleY - imgH / 2);
+      // 呼叫函式繪製各部位
+      drawFeature(targetIndices);  // 嘴唇外框
+      drawFeature(targetIndices2); // 嘴唇內側
+      drawFeature(rightEyeOuter);  // 右眼外圈
+      drawFeature(rightEyeInner);  // 右眼內圈
     }
   }
 }
