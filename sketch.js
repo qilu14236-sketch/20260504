@@ -86,6 +86,7 @@ function draw() {
       drawFeature(rightEyeInner);  // 右眼內圈
       
       // --- 繪製會發光的星星光環 ---
+      push(); // 儲存目前的繪圖設定，避免 noStroke 或發光效果影響到其他部分
       
       // 取得鼻尖做為中心點 (編號 1)
       let pCenter = keypoints[1];
@@ -94,7 +95,7 @@ function draw() {
 
       // 設定發光效果
       drawingContext.shadowBlur = 15 + sin(frameCount * 0.1) * 5; // 讓光暈稍微有呼吸閃爍感
-      drawingContext.shadowColor = color(255, 240, 100); // 光暈為黃色
+      drawingContext.shadowColor = 'rgb(255, 240, 100)'; // 光暈為黃色 (改用字串避免瀏覽器報錯)
       noStroke(); // 星星不要邊框
       fill(255, 255, 150); // 星星本體為淺黃色
 
@@ -118,12 +119,11 @@ function draw() {
         push();
         translate(starX, starY);
         rotate(frameCount * 0.05 + j); // 讓星星自轉
-        drawStar(0, 0, 3, 7, 5);       // 畫出內半徑3、外半徑7的五角星
+        drawStar(0, 0, 6, 15, 5);      // 放大星星尺寸讓它更明顯 (內徑6、外徑15)
         pop();
       }
       
-      // 復原畫筆與陰影設定，以免影響下一幀
-      drawingContext.shadowBlur = 0;
+      pop(); // 復原繪圖設定
     }
   }
 }
@@ -133,7 +133,8 @@ function drawStar(x, y, radius1, radius2, npoints) {
   let angle = TWO_PI / npoints;
   let halfAngle = angle / 2.0;
   beginShape();
-  for (let a = 0; a < TWO_PI; a += angle) {
+  for (let i = 0; i < npoints; i++) {
+    let a = i * angle;
     let sx = x + cos(a) * radius2;
     let sy = y + sin(a) * radius2;
     vertex(sx, sy);
