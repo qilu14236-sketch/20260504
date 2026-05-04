@@ -5,6 +5,8 @@ const targetIndices = [409, 270, 269, 267, 0, 37, 39, 40, 185, 61, 146, 91, 181,
 const targetIndices2 = [76, 77, 90, 180, 85, 16, 315, 404, 320, 307, 306, 408, 304, 303, 302, 11, 72, 73, 74, 184];
 const rightEyeOuter = [130, 247, 30, 29, 27, 28, 56, 190, 243, 112, 26, 22, 23, 24, 110, 25];
 const rightEyeInner = [33, 246, 161, 160, 159, 158, 157, 173, 133, 155, 154, 153, 145, 144, 163, 7];
+// 臉部最外圈輪廓點 (Face Oval)
+const faceOval = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
 
 function setup() {
   // 建立全螢幕畫布
@@ -82,8 +84,64 @@ function draw() {
       drawFeature(targetIndices2); // 嘴唇內側
       drawFeature(rightEyeOuter);  // 右眼外圈
       drawFeature(rightEyeInner);  // 右眼內圈
+      
+      // --- 繪製會發光的星星光環 ---
+      
+      // 取得鼻尖做為中心點 (編號 1)
+      let pCenter = keypoints[1];
+      let cx = pCenter.x * scaleX - imgW / 2;
+      let cy = pCenter.y * scaleY - imgH / 2;
+
+      // 設定發光效果
+      drawingContext.shadowBlur = 15 + sin(frameCount * 0.1) * 5; // 讓光暈稍微有呼吸閃爍感
+      drawingContext.shadowColor = color(255, 240, 100); // 光暈為黃色
+      noStroke(); // 星星不要邊框
+      fill(255, 255, 150); // 星星本體為淺黃色
+
+      // 沿著臉部外圈陣列，每隔 2 個點畫一顆星星 (避免太擁擠)
+      for (let j = 0; j < faceOval.length; j += 2) {
+        let p = keypoints[faceOval[j]];
+        let px = p.x * scaleX - imgW / 2;
+        let py = p.y * scaleY - imgH / 2;
+        
+        // 計算從中心點向外擴張的向量
+        let dx = px - cx;
+        let dy = py - cy;
+        
+        // 額頭上方擴張倍率大一點 (保留給頭髮的空間)，下巴兩側小一點
+        let expandFactorX = 1.3;
+        let expandFactorY = dy < 0 ? 1.6 : 1.2; 
+
+        let starX = cx + dx * expandFactorX;
+        let starY = cy + dy * expandFactorY;
+
+        push();
+        translate(starX, starY);
+        rotate(frameCount * 0.05 + j); // 讓星星自轉
+        drawStar(0, 0, 3, 7, 5);       // 畫出內半徑3、外半徑7的五角星
+        pop();
+      }
+      
+      // 復原畫筆與陰影設定，以免影響下一幀
+      drawingContext.shadowBlur = 0;
     }
   }
+}
+
+// 畫星星的輔助函式
+function drawStar(x, y, radius1, radius2, npoints) {
+  let angle = TWO_PI / npoints;
+  let halfAngle = angle / 2.0;
+  beginShape();
+  for (let a = 0; a < TWO_PI; a += angle) {
+    let sx = x + cos(a) * radius2;
+    let sy = y + sin(a) * radius2;
+    vertex(sx, sy);
+    sx = x + cos(a + halfAngle) * radius1;
+    sy = y + sin(a + halfAngle) * radius1;
+    vertex(sx, sy);
+  }
+  endShape(CLOSE);
 }
 
 // 當瀏覽器視窗大小改變時，自動調整畫布大小以維持全螢幕
