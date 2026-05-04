@@ -123,6 +123,8 @@ function draw() {
         pop();
       }
       
+      // p5.js 的 push()/pop() 不會自動重置 drawingContext，必須手動歸零以免影響後續繪圖！
+      drawingContext.shadowBlur = 0;
       pop(); // 復原繪圖設定
     }
   }
@@ -130,11 +132,19 @@ function draw() {
   // --- 在影像上方加入學號與姓名文字 ---
   push();
   scale(-1, 1); // 再次翻轉 X 軸，讓文字變回正常的左右方向 (不被鏡像)
-  fill(0); // 設定文字顏色為黑色
-  noStroke(); // 文字不需要邊框
+  
+  // 加入文字發光邊緣
+  drawingContext.shadowBlur = 10;
+  drawingContext.shadowColor = 'rgb(0, 255, 255)'; // 發出螢光青色的光芒
+  
+  fill(255); // 文字本身設為白色，搭配發光會更亮眼
+  stroke(0); // 加一點黑色的細邊框讓文字不管在什麼背景下都清楚
+  strokeWeight(2);
   textSize(32); // 設定文字大小
   textAlign(CENTER, BOTTOM); // 設定對齊方式：水平置中、垂直對齊文字底部
-  text("414730225陳怜安", 0, -imgH / 2 - 10); // 將文字畫在影像的正上方
+  text("414730225陳怜安", 0, -imgH / 2 - 15); // 將文字畫在影像的正上方，稍微上移一點
+  
+  drawingContext.shadowBlur = 0; // 畫完後再次歸零陰影
   pop();
 }
 
